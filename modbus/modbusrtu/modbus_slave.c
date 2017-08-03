@@ -20,6 +20,18 @@
 #define MODBUS_RO_REGISTERS         64
 #define MODBUS_RW_REGISTERS         64
  
+/*
+ * modbus_mapping_new():
+ * The modbus_mapping_new() function shall allocate four arrays to store
+ * bits, input bits, registers, inputs registers.  
+ *
+ * for master (r/w)
+ * Input Discrte(r),Coils(r/w),Input Registers(r),Holding Registers(r/w) 
+ *
+ * for slave (r/w)
+ * Input Discrte(r/w),Coils(r/w),Input Registers(r/w),Holding Registers(r/w) 
+ */
+
 int main(int argc, char *argv[])
 {
  //Prepare a Modbus mapping with 30 holding registers

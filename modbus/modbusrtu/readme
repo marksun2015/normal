@@ -1,2 +1,5 @@
 $CC -o modbus_slave modbus_slave.c -I/usr/include/modbus -lmodbus
 $CC -o modbus_master modbus_master.c -I/usr/include/modbus -lmodbus
+
+ref protocol:
+http://www.ni.com/white-paper/7675/zht/
