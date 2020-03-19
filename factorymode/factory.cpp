@@ -2,13 +2,10 @@
 #include "speaker.h"
 #include "buzzer.h"
 
-#define DEVICE_BUZZER 0
-#define DEVICE_SPEAKER 1
-
 class Sound
 {
 	public:
-		Device* CreateProduct(int num)
+		Device* CreateSoundDevice(int num)
 		{
 			switch(num)   //通過傳參例項化物件
 			{
@@ -29,10 +26,10 @@ int main()
 {
 	Sound* sound_device = new Sound();     
 
-	Device* buzzer = sound_device->CreateProduct(DEVICE_BUZZER);  
+	Device* buzzer = sound_device->CreateSoundDevice(DEVICE_BUZZER);  
 	buzzer->show();
 	
-	Device* speaker = sound_device->CreateProduct(DEVICE_SPEAKER);
+	Device* speaker = sound_device->CreateSoundDevice(DEVICE_SPEAKER);
 	speaker->show();
 	
 }
