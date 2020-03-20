@@ -7,13 +7,13 @@ class Sound
 	public:
 		Device* CreateSoundDevice(int num)
 		{
-			switch(num)   //通過傳參例項化物件
+			switch(num)  
 			{
 				case DEVICE_BUZZER:
-					return new dev_buzzer();
+					return new DEV_Buzzer();
 					break;
 				case DEVICE_SPEAKER:
-					return new dev_speaker();
+					return new DEV_Speaker();
 					break;
 				default:
 					return NULL;

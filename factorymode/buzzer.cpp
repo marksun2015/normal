@@ -1,8 +1,7 @@
 #include <stdio.h>
-#include "factory.h"
 #include "buzzer.h"
 
-void dev_buzzer:: show()
+void DEV_Buzzer:: show()
 {
 	printf("device is buzzer\n");
 }

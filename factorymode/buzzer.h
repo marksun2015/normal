@@ -1,8 +1,8 @@
 #ifndef __BUZZER_H__
 #define __BUZZER_H__
-#include "factory.h"
+#include "sound.h"
 
-class dev_buzzer: public Device
+class DEV_Buzzer: public Device
 {
 	public:
 		virtual void show();

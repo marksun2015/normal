@@ -1,8 +1,8 @@
 #ifndef __SPEAKER_H__
 #define __SPEAKER_H__
-#include "factory.h"
+#include "sound.h"
 
-class dev_speaker: public Device
+class DEV_Speaker: public Device
 {
 	public:
 		int waveopen();

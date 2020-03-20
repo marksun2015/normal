@@ -1,1 +1,1 @@
-g++ -o factory factory.cpp speaker.cpp buzzer.cpp 
+g++ -o sound sound.cpp speaker.cpp buzzer.cpp 
