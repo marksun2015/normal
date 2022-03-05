@@ -6,10 +6,10 @@ NumberChains::NumberChains(unsigned int input_integer)
 
 }
 
-void NumberChains::mapping_to_array(int *arr, unsigned int input_integer, int len)
+void NumberChains::integer_mapping_to_array(int *arr, unsigned int input_integer, int len)
 {
     int i = 0;
-    for (i = 0; i < len; i++) {
+    for (i = (len-1); i >= 0; i--) {
         *(arr+i) = input_integer % 10;
         input_integer = input_integer / 10;
     }
