@@ -1,0 +1,7 @@
+# 1. git clone to lib
+git clone https://github.com/google/googletest/
+
+# 2. cmake 
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" 
