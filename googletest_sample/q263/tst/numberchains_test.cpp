@@ -17,9 +17,10 @@ TEST(get_str_order_integer, test2) {
 }
 
 TEST(integer_mapping_to_array, test3) {
-    int *arr = new int[3];
-    NumberChains::integer_mapping_to_array(arr, 456, 3);
+    unsigned int *arr = new unsigned int[3];
+    NumberChains::mapping_int_to_array(arr, 456, 3);
     EXPECT_EQ(*arr, 4); 
     EXPECT_EQ(*(arr+1), 5); 
     EXPECT_EQ(*(arr+2), 6); 
+    delete arr;
 }

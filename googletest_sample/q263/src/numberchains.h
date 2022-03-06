@@ -1,9 +1,12 @@
 #ifndef NUMBERCHAINS_H
 #define NUMBERCHAINS_H
 
+//#include <functional>
 #include <algorithm>
 #include <math.h>
 #include <string>
+#include <iostream>
+#include <memory>
 
 enum {
     ASCENDING,
@@ -11,10 +14,9 @@ enum {
 };
 
 class NumberChains {
-    NumberChains(unsigned int input_integer);
-
     public:
-        static void integer_mapping_to_array(int *arr, unsigned int input_integer, int len);
+        NumberChains(unsigned int input_integer);
+        static void mapping_int_to_array(unsigned int *arr, unsigned int input_integer, int len);
         static unsigned int get_str_order_integer(unsigned int *input_str, unsigned int len, int order_type);
         static unsigned int get_str_digits(unsigned int input_integer);
 };
