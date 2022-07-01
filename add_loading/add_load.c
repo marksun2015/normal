@@ -17,6 +17,10 @@
 #define msleep(x) usleep(x*1000)//函式庫只有usleep而沒有msleep，所以用此種方法取代
 pthread_mutex_t exec_mutex;//mutex變數，因為要讓兩個thread使用，所以要設為全域
 
+#if 0
+pthread_mutexattr_t mutexattr;
+#endif
+
 void *thread_for() { 
 
 	int i=0;
@@ -27,9 +31,8 @@ void *thread_for() {
 		pthread_mutex_unlock(&exec_mutex);
 		// printf("thread_function is running. i= %d\n",i);
 	}
-	pthread_exit("Thank you for the CPU time");
+	pthread_exit("Thank you for the CPU time \n");
 }
-
 
 
 int main(int argc ,char *argv[]) {
@@ -50,7 +53,14 @@ int main(int argc ,char *argv[]) {
 		rest_time=load_sample_time*(1-load);
 		busy_time=load_sample_time-rest_time;//(load)*load_sample_time;
 	}
+
+#if 0
+    pthread_mutexattr_init(&mutexattr);
+    pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&exec_mutex,&mutexattr);
+#else
 	pthread_mutex_init(&exec_mutex,NULL);	
+#endif
 
 	printf("load=%f,busy_time=%d,rest_time=%d\n",load,busy_time,rest_time);
 	pthread_mutex_lock(&exec_mutex);
