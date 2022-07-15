@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   /* establish connection to gateway on ASA standard port 502 */
   s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   server.sin_family = AF_INET;
-  server.sin_port = htons(502); /* ASA standard port */
+  server.sin_port = htons(1502); /* ASA standard port */
   server.sin_addr.s_addr = inet_addr(ip_adrs);
 
   i = connect(s, (struct sockaddr *)&server, sizeof(struct sockaddr_in));

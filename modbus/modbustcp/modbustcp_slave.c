@@ -38,7 +38,7 @@ int main(void)
 	/*文件描述符的最大值，要保证fdmax是需要监视的最大的文件描述符值*/  
 	int fdmax;  
   
-	ctx = modbus_new_tcp("127.0.0.1", 502);  
+	ctx = modbus_new_tcp("192.168.1.179", 1502);
   
 	mb_mapping = modbus_mapping_new(MODBUS_MAX_READ_BITS, 0,  
 									MODBUS_MAX_READ_REGISTERS, 0);  
@@ -125,7 +125,6 @@ int main(void)
 					}  
 				} else {//一个已连接的socket客户端（modbus主机）发送来了新的请求报文  
 					uint8_t query[MODBUS_TCP_MAX_ADU_LENGTH];  
-  
 			//处理请求报文  
 					modbus_set_socket(ctx, master_socket);  
 					rc = modbus_receive(ctx, query);  
