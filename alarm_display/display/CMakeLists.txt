@@ -1,0 +1,6 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+PROJECT(text)
+SET(VERSION "1.0.0")
+
+ADD_LIBRARY(display display.c)
