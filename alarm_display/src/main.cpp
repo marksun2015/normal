@@ -22,12 +22,47 @@ typedef struct alarm_data {
     const char *disp_str;
 } alarm_data;
 
+#define MISC_IOCTBEEPCTL                (0x6B2D)
+void beep_wakeup()
+{
+    printf("111 \n");
+    int handle = open("/dev/hwmisc", O_RDWR);
+    if (!handle) {
+        return;
+    }
+
+    ioctl(handle, MISC_IOCTBEEPCTL, 1);
+    usleep(200000);
+    ioctl(handle, MISC_IOCTBEEPCTL, 0);
+    usleep(50000);
+
+    ioctl(handle, MISC_IOCTBEEPCTL, 1);
+    usleep(200000);
+    ioctl(handle, MISC_IOCTBEEPCTL, 0);
+    usleep(50000);
+
+    ioctl(handle, MISC_IOCTBEEPCTL, 1);
+    usleep(200000);
+    ioctl(handle, MISC_IOCTBEEPCTL, 0);
+    usleep(50000);
+
+    ioctl(handle, MISC_IOCTBEEPCTL, 1);
+    usleep(800000);
+    ioctl(handle, MISC_IOCTBEEPCTL, 0);
+
+    close(handle);
+    return;
+}
+
 void* alarm_display(void* data) 
 {
     alarm_data *ad = (alarm_data*) data; // 取得輸入資料
+    int font_type = VGA25x57_IDX;
     while(1) {
-        printf("%d\n", ad->alarm); 
-        printf("%s\n", ad->disp_str); 
+        if(ad->alarm)
+            flicker_display(font_type, ad->disp_str, TEXT_LOWER);
+
+        ad->alarm = 0;
         sleep(1);
     }
     pthread_exit(NULL); 
@@ -37,7 +72,8 @@ void* alarm_display(void* data)
 int main(int argc, char *argv[])
 {
     char sys_time[128];
-	int font_type = VGA10x18_IDX;
+	//int font_type = VGA10x18_IDX;
+	int font_type;
 	int i;
   
 	alarm_data data;
@@ -59,22 +95,8 @@ int main(int argc, char *argv[])
 	}
 
 
-	if((90 == draw_info.portrait_mode) || (270 == draw_info.portrait_mode)) {
-		switch (draw_info.resolution) {
-		case RES_480x272:
-			font_type = VGA8x8_IDX;
-			break;
-		case RES_800x480:
-			font_type = VGA8x16_IDX;
-			break;
-		default:
-			font_type = VGA10x18_IDX;
-			break;
-		}
-	}
-
     draw_info.portrait_mode = 180;
-    font_type = VGA10x18_IDX;
+    font_type = VGA25x57_IDX;
 
     if(strcmp(argv[1], "FB")==0) {
         fb_open("/dev/fb0");
@@ -82,14 +104,40 @@ int main(int argc, char *argv[])
         {
             rawtime = time(NULL);
             tmp = gmtime(&rawtime);
-            sprintf(sys_time,"time: %d %d %d", tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+            //sprintf(sys_time,"Day %02d/%02d(%02d) Time %02d:%02d:%02d",
+            //        tmp->tm_mon+1, tmp->tm_mday, tmp->tm_wday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+            sprintf(sys_time,"Time %02d:%02d:%02d", tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
             display_text(font_type, sys_time, TEXT_UPPER);
 
-            data.alarm++;
-            data.disp_str = "hihihi";
-            //marquee_display(font_type,"Time is up! Time is up!",TEXT_LOWER); //test
-            //display_text(font_type,"=============",TEXT_LOWER);
+            if((tmp->tm_hour == 9) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
+                data.alarm = 1;
+                data.disp_str = "Time is up! Get to work!";
+            }
 
+            if((tmp->tm_hour == 10) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
+                //beep_wakeup();
+                data.alarm = 1;
+                data.disp_str = "Time is up! Meeting!";
+            }
+
+            if((tmp->tm_hour == 12) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
+                beep_wakeup();
+                data.alarm = 1;
+                data.disp_str = "Time is up! Lunch Time!";
+            }
+
+            if((tmp->tm_hour == 13) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
+                data.alarm = 1;
+                data.disp_str = "Time is up! Wake Up!";
+            }
+
+            if((tmp->tm_hour == 18) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
+                beep_wakeup();
+                data.alarm = 1;
+                data.disp_str = "Time is up! Get off work!";
+            }
+
+            //display_text(font_type,"=============",TEXT_LOWER);
             //display_margin();                 //test
             //progressbar(100 , COLOR_WHITE);   //test
             //progressbar(30 , COLOR_GREEN);    //test

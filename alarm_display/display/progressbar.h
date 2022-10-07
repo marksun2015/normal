@@ -9,7 +9,7 @@
 
 #include "font_type.h"
 
-#define BAR_WEIGHT	30
+#define BAR_WEIGHT	70
 #define BOX_EDAGE	4
 
 typedef unsigned char 	u8;

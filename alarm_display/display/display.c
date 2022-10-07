@@ -19,6 +19,7 @@
 #include "font_8x8.h"
 #include "font_8x16.h"
 #include "font_10x18.h"
+#include "font_25x57.h"
 
 #define ADDR_DISP       0x27C00000 ///MAP FROM BOOT ARGS "fb"
 #define DISP_WIDTH      800
@@ -35,6 +36,9 @@ typedef unsigned char byte;
 
 typedef void (* FUNC_DRAW_SCREEN)(int x, int y, int color);
 FUNC_DRAW_SCREEN draw_screen;
+
+u32 *fb_buffer;
+unsigned disp_mapped_size;
 
 void DrawPixNV12(void *addrbase, int x, int y , int R, int G, int B)
 {
@@ -114,14 +118,50 @@ static void draw_bar_v(int startx,int starty,int len,int hight,int screenx)
 	if (draw_info.scr_var.bits_per_pixel ==32)
 	{
 		u32 *p;
-		for ( i = starty;i<starty+hight;i++)
-			for (j = startx;j<len+startx;j++)
+		for (i = starty; i<starty+hight; i++)
+			for (j = startx; j<len+startx; j++)
 			{
 				draw_screen(j, i, color32);
 			}
 	}
 }
 
+static void put_char_v3(int x, int y, int c, int selection, int font_w,int font_h)
+{
+	int i,j,bits;
+	unsigned int *p;
+
+	unsigned int color32=draw_info.src_color.text32; //ARGB  ex:RED 0x00FF00000
+	int xc=x;
+	int yc=y;
+
+	if(selection == 0){
+		for (i = 0; i < font_h; i++) {
+			bits = font_descriptor.data[font_h * c * 4 + i * 4];
+			for (j = 0; j < font_w; j++, bits <<= 1){
+				if((j%8) == 0) {
+					bits = font_descriptor.data[font_h * c * 4 + i * 4 + j/8];
+				}
+				if (bits & 0x80){
+					draw_screen(x+j, y+i, color32);
+				}
+			}
+		}
+	}else if(selection == 180){
+		for (i = 0; i < font_h; i++) {
+			bits = font_descriptor.data[font_h * c * 4 + i * 4];
+			for (j = 0; j < font_w; j++, bits <<= 1){
+				if((j%8) == 0) {
+					bits = font_descriptor.data[font_h * c * 4 + i * 4 + j/8];
+				}
+				if (bits & 0x80){
+					draw_screen(x-j, y-i, color32);
+				}
+			}
+            printf("\n");
+		}
+	}
+}
 
 static void put_char_v2(int x, int y, int c, int selection, int font_w,int font_h)
 {
@@ -301,7 +341,7 @@ void disp_open()
 	unsigned width = 8;
 	byte *rgb_in, *yuv_out;
 
-	unsigned page_size, mapped_size, offset_in_page;
+	unsigned page_size, offset_in_page;
 
 	/* MAP DISP PHY ADDR*/
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
@@ -309,10 +349,10 @@ void disp_open()
 	page_size = getpagesize();
 	offset_in_page = (unsigned)target & (page_size - 1);
 
-	mapped_size = DISP_WIDTH * DISP_HEIGHT * 3 / 2; //YUV420
+	disp_mapped_size = DISP_WIDTH * DISP_HEIGHT * 3 / 2; //YUV420
 
 	draw_info.addr = mmap(NULL,
-                 mapped_size,
+                 disp_mapped_size,
                  PROT_READ | PROT_WRITE,
                  MAP_SHARED,
                  fd,
@@ -326,19 +366,20 @@ void disp_open()
 	draw_info.src_color.bar32 = COLOR_GREEN;
 	draw_info.src_color.text32 = COLOR_CYAN;
 
-	/* clear YUV buffer: assign black color */
-	memset(draw_info.addr, 0x10, (DISP_WIDTH * DISP_HEIGHT));
-	memset(draw_info.addr + (DISP_WIDTH * DISP_HEIGHT), 0x80, mapped_size - (DISP_WIDTH * DISP_HEIGHT));
-
 	draw_screen = draw_YUV_screen;
 	close(fd);
 }
 
 void disp_close(void)
 {
-	unsigned mapped_size;
-	mapped_size = DISP_WIDTH * DISP_HEIGHT * 3 / 2; //YUV420
-	munmap(draw_info.addr, mapped_size);
+	munmap(draw_info.addr, disp_mapped_size);
+}
+
+void disp_clear(void)
+{
+	/* clear YUV buffer: assign black color */
+	memset(draw_info.addr, 0x10, (DISP_WIDTH * DISP_HEIGHT));
+	memset(draw_info.addr + (DISP_WIDTH * DISP_HEIGHT), 0x80, disp_mapped_size - (DISP_WIDTH * DISP_HEIGHT));
 }
 
 void fb_open(const char *device_node)
@@ -382,13 +423,28 @@ void fb_open(const char *device_node)
 	/* clear framebuffer */
 	memset(draw_info.addr, 0, draw_info.scr_var.yres * draw_info.scr_fix.line_length);
 
+	fb_buffer = malloc(draw_info.scr_var.xres * draw_info.scr_var.yres * sizeof(u32));
+
 	draw_screen = draw_RGB_screen;
 	close(fd);
 }
 
 void fb_close(void)
 {
+	free(fb_buffer);
 	munmap (draw_info.addr , draw_info.scr_var.yres * draw_info.scr_fix.line_length);
+}
+
+void fb_clear(void)
+{
+	/* clear framebuffer */
+	memset(draw_info.addr, 0, draw_info.scr_var.yres * draw_info.scr_fix.line_length);
+}
+
+void fb_update(void)
+{
+	/* clear framebuffer */
+	memcpy(draw_info.addr, fb_buffer, draw_info.scr_var.yres * draw_info.scr_fix.line_length);
 }
 
 void progressbar(int ratio, unsigned int color)
@@ -477,12 +533,13 @@ void display_margin (void)
 
 }
 
-void marquee_display (int font_type,const char *str_input,int position)
+void flicker_display (int font_type,const char *str_input,int position)
 {
 	int displayX,displayY;
 	unsigned char display_str[128];
 	int strlength=strlen(str_input);
-	int i, count = 300;;
+	int i, count = 10;
+	int step = 30;
 
 	strncpy(display_str,str_input,strlen(str_input));
 	display_str[strlength]='\0';
@@ -514,7 +571,19 @@ void marquee_display (int font_type,const char *str_input,int position)
 					displayX=draw_info.scr_var.xres - draw_info.scr_var.xres/8;
 					displayY=draw_info.scr_var.yres/2-25;
 				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2+80;
+				}else if(position ==TEXT_LOWER){
+					//displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayX=draw_info.scr_var.xres - draw_info.scr_var.xres/8;
+					displayY=draw_info.scr_var.yres/2-25;
+				}
 			}
+
 			break;
 		case 270:
 		default :
@@ -539,21 +608,178 @@ void marquee_display (int font_type,const char *str_input,int position)
 					displayX=draw_info.scr_var.xres/8;
 					displayY=draw_info.scr_var.yres/2+25;
 				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position ==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2-80;
+				}else if(position ==TEXT_LOWER){
+					//displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayX=draw_info.scr_var.xres/8;
+					displayY=draw_info.scr_var.yres/2+25;
+				}
 			}
+
 			break;
 	}
 
-	draw_info.src_color.bar32=COLOR_BLACK;
+	draw_info.src_color.text32 = COLOR_ORANGE;
+    for (i = 0 ; i < count; i++) {
+	    draw_info.src_color.bar32 = COLOR_RED;
+        if (draw_info.portrait_mode == 180) {
+            draw_bar_v(800, displayY-70,
+                    draw_info.scr_var.xres,
+                    BAR_WEIGHT,
+                    draw_info.scr_var.xres); // to clear previous text
+        } else {
+            draw_bar_v(0, displayY-8,
+                    draw_info.scr_var.xres,
+                    BAR_WEIGHT,
+                    draw_info.scr_var.xres); // to clear previous text
+        }
 
+        put_string_center(displayX, displayY,
+                display_str,
+                draw_info.portrait_mode,
+                font_descriptor.width,
+                font_descriptor.height,
+                draw_text,
+                strlength);
+
+        usleep(600000);
+
+	    draw_info.src_color.bar32 = COLOR_BLACK;
+        if (draw_info.portrait_mode == 180) {
+            draw_bar_v(800, displayY-70,
+                    draw_info.scr_var.xres,
+                    BAR_WEIGHT,
+                    draw_info.scr_var.xres); // to clear previous text
+        } else {
+            draw_bar_v(0, displayY-8,
+                    draw_info.scr_var.xres,
+                    BAR_WEIGHT,
+                    draw_info.scr_var.xres); // to clear previous text
+        }
+
+        usleep(400000);
+    }
+
+	draw_info.src_color.text32 = COLOR_CYAN;
+    if (draw_info.portrait_mode == 180) {
+        draw_bar_v(800, displayY-60,
+                draw_info.scr_var.xres,
+                BAR_WEIGHT,
+                draw_info.scr_var.xres); // to clear previous text
+    } else {
+        draw_bar_v(0, displayY-8,
+                draw_info.scr_var.xres,
+                BAR_WEIGHT,
+                draw_info.scr_var.xres); // to clear previous text
+    }
+}
+
+void marquee_display (int font_type,const char *str_input,int position)
+{
+	int displayX,displayY;
+	unsigned char display_str[128];
+	int strlength=strlen(str_input);
+	int i, count = 300;
+	int step = 30;
+
+	strncpy(display_str,str_input,strlen(str_input));
+	display_str[strlength]='\0';
+
+	if(draw_info.addr == NULL ){
+		printf ("Error: mapping framebuffer memory is NULL.\n");
+	}
+	switch (draw_info.portrait_mode) {
+		case 90:
+		case 180:
+			if(font_type==VGA8x8_IDX){
+				font_descriptor=font_vga_8x8;
+				draw_text=put_char_v1;
+				displayX=draw_info.scr_var.xres-100;
+				displayY=draw_info.scr_var.yres-50;
+			}else if(font_type==VGA8x16_IDX){
+				font_descriptor=font_vga_8x16;
+				draw_text=put_char_v1;
+				displayX=draw_info.scr_var.xres-100 ;
+				displayY=draw_info.scr_var.yres-70;
+			}else if (font_type==VGA10x18_IDX){
+				font_descriptor=font_vga_10x18;
+				draw_text=put_char_v2;
+				if(position==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2+80;
+				}else if(position ==TEXT_LOWER){
+					//displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayX=draw_info.scr_var.xres - draw_info.scr_var.xres/8;
+					displayY=draw_info.scr_var.yres/2-25;
+				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2+80;
+				}else if(position ==TEXT_LOWER){
+					//displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayX=draw_info.scr_var.xres - draw_info.scr_var.xres/8;
+					displayY=draw_info.scr_var.yres/2-25;
+				}
+			}
+
+			break;
+		case 270:
+		default :
+			if(font_type==VGA8x8_IDX){
+				font_descriptor=font_vga_8x8;
+				draw_text=put_char_v1;
+				displayX=draw_info.scr_var.xres/3+50;
+				displayY=draw_info.scr_var.yres/4;
+			}else if(font_type==VGA8x16_IDX){
+				font_descriptor=font_vga_8x16;
+				draw_text=put_char_v1;
+				displayX=draw_info.scr_var.xres/3+50;
+				displayY=draw_info.scr_var.yres/4+20;
+			}else if (font_type==VGA10x18_IDX){
+				font_descriptor=font_vga_10x18;
+				draw_text=put_char_v2;
+				if(position ==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2-80;
+				}else if(position ==TEXT_LOWER){
+					//displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayX=draw_info.scr_var.xres/8;
+					displayY=draw_info.scr_var.yres/2+25;
+				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position ==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2-80;
+				}else if(position ==TEXT_LOWER){
+					//displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayX=draw_info.scr_var.xres/8;
+					displayY=draw_info.scr_var.yres/2+25;
+				}
+			}
+
+			break;
+	}
+
+	draw_info.src_color.bar32 = COLOR_BLACK;
 	draw_info.src_color.text32 = COLOR_MARQUEE;
     for (i = 0 ; i < count; i++) {
         if (draw_info.portrait_mode == 180) {
-            draw_bar_v(800, displayY-24, 
+            draw_bar_v(800, displayY-70,
                     draw_info.scr_var.xres,
-                    BAR_WEIGHT + 10,
+                    BAR_WEIGHT,
                     draw_info.scr_var.xres); // to clear previous text
         } else {
-            draw_bar_v(0, displayY-8, 
+            draw_bar_v(0, displayY-8,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
                     draw_info.scr_var.xres); // to clear previous text
@@ -564,28 +790,29 @@ void marquee_display (int font_type,const char *str_input,int position)
                 draw_info.portrait_mode,
                 font_descriptor.width, 
                 font_descriptor.height, 
-                draw_text,strlength);
+                draw_text,
+                strlength);
         
         if (draw_info.portrait_mode == 180) {
-            displayX -= 10;
+            displayX -= step;
             if (displayX < 0)
                 displayX = 800;
         } else {
-            displayX += 10;
+            displayX += step;
             if (displayX > 800)
                 displayX = 0;
         }
-        usleep(50000);
+        usleep(100000);
     } 
 
 	draw_info.src_color.text32 = COLOR_CYAN;
     if (draw_info.portrait_mode == 180) {
-        draw_bar_v(800, displayY-24, 
+        draw_bar_v(800, displayY-60,
                 draw_info.scr_var.xres,
-                BAR_WEIGHT + 10,
+                BAR_WEIGHT,
                 draw_info.scr_var.xres); // to clear previous text
     } else {
-        draw_bar_v(0, displayY-8, 
+        draw_bar_v(0, displayY-8,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
                 draw_info.scr_var.xres); // to clear previous text
@@ -648,7 +875,18 @@ void display_text (int font_type,const char *str_input,int position)
 					displayX=draw_info.scr_var.xres/2+150;
 					displayY=draw_info.scr_var.yres/2+((strlength/2)*font_descriptor.width);
 				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2;
+					displayY=draw_info.scr_var.yres/2+((strlength/2)*font_descriptor.width);
+				}else if(position==TEXT_LOWER){
+					displayX=draw_info.scr_var.xres/2+150;
+					displayY=draw_info.scr_var.yres/2+((strlength/2)*font_descriptor.width);
+				}
 			}
+
 			break;
 		case 180:
 			if(font_type==VGA8x8_IDX){
@@ -671,7 +909,18 @@ void display_text (int font_type,const char *str_input,int position)
 					displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
 					displayY=draw_info.scr_var.yres/2-25;
 				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2+80;
+				}else if(position ==TEXT_LOWER){
+					displayX=draw_info.scr_var.xres/2+((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2-25;
+				}
 			}
+
 			break;
 		case 270:
 			if(font_type==VGA8x8_IDX){
@@ -715,7 +964,18 @@ void display_text (int font_type,const char *str_input,int position)
 					displayX=draw_info.scr_var.xres/2-150;
 					displayY=draw_info.scr_var.yres/2-((strlength/2)*font_descriptor.width);
 				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position ==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2;
+					displayY=draw_info.scr_var.yres/2-((strlength/2)*font_descriptor.width);
+				}else if(position ==TEXT_LOWER){
+					displayX=draw_info.scr_var.xres/2-150;
+					displayY=draw_info.scr_var.yres/2-((strlength/2)*font_descriptor.width);
+				}
 			}
+
 			break;
 		default :
 			if(font_type==VGA8x8_IDX){
@@ -738,70 +998,33 @@ void display_text (int font_type,const char *str_input,int position)
 					displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
 					displayY=draw_info.scr_var.yres/2+25;
 				}
+			}else if (font_type==VGA25x57_IDX){
+				font_descriptor=font_vga_25x57;
+				draw_text=put_char_v3;
+				if(position ==TEXT_UPPER){
+					displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2-80;
+				}else if(position ==TEXT_LOWER){
+					displayX=draw_info.scr_var.xres/2-((strlength/2)*font_descriptor.width);
+					displayY=draw_info.scr_var.yres/2+25;
+				}
 			}
+
 			break;
 	}
 
 	draw_info.src_color.bar32=COLOR_BLACK;
-
-	//if(position ==TEXT_LOWER){
-		if (!(draw_info.portrait_mode == 90 || draw_info.portrait_mode == 180 || draw_info.portrait_mode == 270))
-		{
-			switch (draw_info.resolution) {
-			case RES_480x272:
-				draw_bar_v(displayX-10,displayY-8,draw_info.scr_var.xres/2+30,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
-				break;
-			default:
-				draw_bar_v(150,displayY-8,draw_info.scr_var.xres/2+90,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
-				break;
-			}
-		}
-		else if (draw_info.portrait_mode == 90)
-		{
-			switch (draw_info.resolution) {
-			case RES_480x272:
-				if(position == TEXT_MIDDLE)
-					draw_bar_v(displayX-5, displayY-260, BAR_WEIGHT-5,draw_info.scr_var.yres/2+40,draw_info.scr_var.xres); // to clear previous text
-				else
-					draw_bar_v(displayX-5, 35, BAR_WEIGHT-5,draw_info.scr_var.yres/3+110,draw_info.scr_var.xres); // to clear previous text
-				break;
-			case RES_800x480:
-				draw_bar_v(displayX-15,55,BAR_WEIGHT+5,draw_info.scr_var.yres/2+120,draw_info.scr_var.xres); // to clear previous text
-				break;
-			default:  //CMT-series or RES_Default
-				draw_bar_v(displayX-15,displayY-300,BAR_WEIGHT+5,draw_info.scr_var.yres/2+40,draw_info.scr_var.xres); // to clear previous text
-				break;
-			}
-		}
-		else if (draw_info.portrait_mode == 180)
-		{
-			switch (draw_info.resolution) {
-			case RES_480x272:
-				draw_bar_v(displayX-265,displayY-24,draw_info.scr_var.xres/2+50,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
-				break;
-			case RES_800x480:
-				draw_bar_v(150,displayY-24,draw_info.scr_var.xres/2+90,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
-				break;
-			default:
-				draw_bar_v(displayX-400,displayY-24,draw_info.scr_var.xres/2,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
-			}
-		}
-		else if(draw_info.portrait_mode == 270)
-		{
-			switch (draw_info.resolution) {
-			case RES_480x272:
-				if(position == TEXT_LOWER)
-					draw_bar_v(displayX-20, 40, BAR_WEIGHT-5, draw_info.scr_var.yres/3+110, draw_info.scr_var.xres); // to clear previous text
-				else
-					draw_bar_v(displayX-23, displayY-12, BAR_WEIGHT-5, draw_info.scr_var.yres/2+30, draw_info.scr_var.xres); // to clear previous text
-				break;
-			default:
-				draw_bar_v(displayX-23,55,BAR_WEIGHT-5,draw_info.scr_var.yres/2+120,draw_info.scr_var.xres); // to clear previous text
-				break;
-			}
-		}
-
-	//}
+    if (draw_info.portrait_mode == 180){
+        draw_bar_v(800, displayY-60,
+                draw_info.scr_var.xres,
+                BAR_WEIGHT,
+                draw_info.scr_var.xres); // to clear previous text
+    } else {
+        draw_bar_v(0, displayY-8,
+                draw_info.scr_var.xres,
+                BAR_WEIGHT,
+                draw_info.scr_var.xres); // to clear previous text
+    }
 
 	put_string_center(displayX, displayY, display_str, draw_info.portrait_mode,
 			font_descriptor.width, font_descriptor.height, draw_text,strlength);
@@ -822,6 +1045,9 @@ void display_ratio (int ratio,int font_type)
 	}else if (font_type==VGA10x18_IDX){
 		font_descriptor=font_vga_10x18;
 		draw_text=put_char_v2;
+	}else if (font_type==VGA25x57_IDX){
+		font_descriptor=font_vga_25x57;
+		draw_text=put_char_v3;
 	}
 
 	if(ratio>100){ratio=100;}
