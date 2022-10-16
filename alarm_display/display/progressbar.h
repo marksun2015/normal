@@ -50,7 +50,7 @@ struct fb_info {
 	unsigned int resolution;
 };
 
-typedef void (* DRAW_TEXT_FUNC) (int x, int y, int c, int selection, int font_w,int font_h);
+typedef void (* DRAW_TEXT_FUNC) (int x, int y, int c, int selection, int font_w,int font_h,unsigned int color32);
 
 struct fb_info draw_info;
 struct fbcon_font_desc font_descriptor;

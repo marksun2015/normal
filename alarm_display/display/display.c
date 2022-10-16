@@ -110,12 +110,11 @@ static void draw_box(int x,int y,int x1,int y1,int screenx)
 	}
 }
 
-static void draw_bar_v(int startx,int starty,int len,int hight,int screenx)
+static void draw_bar_v(int startx,int starty,int len,int hight,int screenx, unsigned int color32)
 {
 	int i,j;
-	unsigned int color32 = draw_info.src_color.bar32;
 
-	if (draw_info.scr_var.bits_per_pixel ==32)
+	if (draw_info.scr_var.bits_per_pixel == 32)
 	{
 		u32 *p;
 		for (i = starty; i<starty+hight; i++)
@@ -126,12 +125,11 @@ static void draw_bar_v(int startx,int starty,int len,int hight,int screenx)
 	}
 }
 
-static void put_char_v3(int x, int y, int c, int selection, int font_w,int font_h)
+static void put_char_v3(int x, int y, int c, int selection, int font_w,int font_h, unsigned int color32)
 {
 	int i,j,bits;
 	unsigned int *p;
 
-	unsigned int color32=draw_info.src_color.text32; //ARGB  ex:RED 0x00FF00000
 	int xc=x;
 	int yc=y;
 
@@ -163,12 +161,11 @@ static void put_char_v3(int x, int y, int c, int selection, int font_w,int font_
 	}
 }
 
-static void put_char_v2(int x, int y, int c, int selection, int font_w,int font_h)
+static void put_char_v2(int x, int y, int c, int selection, int font_w,int font_h, unsigned int color32)
 {
 	int i,j,bits;
 	unsigned int *p;
 
-	unsigned int color32=draw_info.src_color.text32; //ARGB  ex:RED 0x00FF00000
 	int xc=x;
 	int yc=y;
 
@@ -229,11 +226,10 @@ static void put_char_v2(int x, int y, int c, int selection, int font_w,int font_
 	}
 }
 
-static void put_char_v1(int x, int y, int c, int selection, int font_w,int font_h)
+static void put_char_v1(int x, int y, int c, int selection, int font_w,int font_h, unsigned int color32)
 {
 	int i,j,bits;
 	unsigned int *p;
-	unsigned int color32=draw_info.src_color.text32; //ARGB  ex:RED 0x00FF00000
 	int xc=x;
 	int yc=y;
 
@@ -282,27 +278,28 @@ static void put_char_v1(int x, int y, int c, int selection, int font_w,int font_
 	}
 }
 
-static void put_string(int x, int y, char *s, int selection, int font_w, int font_h,DRAW_TEXT_FUNC draw_text)
+static void put_string(int x, int y, char *s, int selection, int font_w, int font_h, DRAW_TEXT_FUNC draw_text, unsigned int color32)
 {
 	int i;
 	if(selection == 0){
 		for (i = 0; *s; i++, x += font_w, s++)
-			draw_text (x, y, *s, selection, font_w,font_h);
+			draw_text (x, y, *s, selection, font_w,font_h, color32);
 	}else if(selection == 90){
 		for (i = 0; *s; i++, y -= font_w, s++)
-			draw_text (x, y, *s, selection, font_w,font_h);
+			draw_text (x, y, *s, selection, font_w,font_h, color32);
 	}else if(selection == 180){
 		for (i = 0; *s; i++, x -= font_w, s++)
-			draw_text (x, y, *s, selection, font_w,font_h);
+			draw_text (x, y, *s, selection, font_w,font_h, color32);
 	}else if(selection == 270){
 		for (i = 0; *s; i++, y += font_w, s++)
-			draw_text (x, y, *s, selection, font_w,font_h);
+			draw_text (x, y, *s, selection, font_w,font_h, color32);
 	}
 }
 
-static void put_string_center(int x, int y, char *s, int selection, int font_w, int font_h,DRAW_TEXT_FUNC draw_text,int sl)
+static void put_string_center(int x, int y, char *s, int selection, int font_w, int font_h, 
+        DRAW_TEXT_FUNC draw_text, int sl, unsigned int color32)
 {
-	put_string (x , y - font_w / 2, s, selection, font_w,font_h,draw_text);
+	put_string (x , y - font_w / 2, s, selection, font_w, font_h, draw_text, color32);
 }
 
 #define MISC_IOCGPORTRAIT       (0x80046B1F)
@@ -447,13 +444,12 @@ void fb_update(void)
 	memcpy(draw_info.addr, fb_buffer, draw_info.scr_var.yres * draw_info.scr_fix.line_length);
 }
 
-void progressbar(int ratio, unsigned int color)
+void progressbar(int ratio, unsigned int color32)
 {
 	int screenx=draw_info.scr_var.xres;
 	int screeny=draw_info.scr_var.yres;
 
-	draw_info.src_color.bar32=color;
-
+	//draw_info.src_color.bar32 = color32;
 	if (ratio >100) ratio = 100;
 
 	if (!(draw_info.portrait_mode == 90 || draw_info.portrait_mode == 180 || draw_info.portrait_mode == 270))
@@ -465,7 +461,7 @@ void progressbar(int ratio, unsigned int color)
 		if(draw_info.resolution == RES_480x272)
 			starty = screeny - screeny/6-5;
 
-		draw_bar_v(startx,starty,len*ratio/100,BAR_WEIGHT,screenx);
+		draw_bar_v(startx,starty,len*ratio/100,BAR_WEIGHT,screenx, color32);
 
 	}
 	else if (draw_info.portrait_mode == 90)
@@ -473,14 +469,14 @@ void progressbar(int ratio, unsigned int color)
 		int startx = screenx - screenx/8;
 		int len = screeny - (screeny/8)*2 ;
 		int starty =  screeny /8;
-		draw_bar_v(startx,screeny -(len*ratio/100 +screeny/8 ),BAR_WEIGHT,len*ratio/100,screenx );
+		draw_bar_v(startx,screeny -(len*ratio/100 +screeny/8 ),BAR_WEIGHT,len*ratio/100,screenx, color32);
 	}
 	else if(draw_info.portrait_mode == 270)
 	{
 		int startx = screenx/8;
 		int starty = screeny/8;
 		int len = screeny - screeny/8 - starty;
-		draw_bar_v(startx,starty,BAR_WEIGHT,len*ratio/100,screenx);
+		draw_bar_v(startx,starty,BAR_WEIGHT,len*ratio/100,screenx, color32);
 	}
 	else if (draw_info.portrait_mode == 180)
 	{
@@ -491,7 +487,7 @@ void progressbar(int ratio, unsigned int color)
 		if(draw_info.resolution == RES_480x272)
 			starty = screeny /8-25;
 
-		draw_bar_v(screenx - (len*ratio/100 +screenx/8) ,starty,len*ratio/100,BAR_WEIGHT,screenx);
+		draw_bar_v(screenx - (len*ratio/100 +screenx/8) ,starty,len*ratio/100,BAR_WEIGHT,screenx, color32);
 	}
 }
 
@@ -533,7 +529,7 @@ void display_margin (void)
 
 }
 
-void flicker_display (int font_type,const char *str_input,int position)
+void flicker_display (int font_type, const char *str_input, int position, unsigned int color32)
 {
 	int displayX,displayY;
 	unsigned char display_str[128];
@@ -624,19 +620,19 @@ void flicker_display (int font_type,const char *str_input,int position)
 			break;
 	}
 
-	draw_info.src_color.text32 = COLOR_ORANGE;
     for (i = 0 ; i < count; i++) {
-	    draw_info.src_color.bar32 = COLOR_RED;
         if (draw_info.portrait_mode == 180) {
-            draw_bar_v(800, displayY-70,
+            draw_bar_v(800, displayY-75,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
-                    draw_info.scr_var.xres); // to clear previous text
+                    draw_info.scr_var.xres, 
+                    COLOR_RED); // to clear previous text
         } else {
             draw_bar_v(0, displayY-8,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
-                    draw_info.scr_var.xres); // to clear previous text
+                    draw_info.scr_var.xres, 
+                    COLOR_RED); // to clear previous text
         }
 
         put_string_center(displayX, displayY,
@@ -645,41 +641,44 @@ void flicker_display (int font_type,const char *str_input,int position)
                 font_descriptor.width,
                 font_descriptor.height,
                 draw_text,
-                strlength);
+                strlength,
+                color32);
 
         usleep(600000);
 
-	    draw_info.src_color.bar32 = COLOR_BLACK;
         if (draw_info.portrait_mode == 180) {
-            draw_bar_v(800, displayY-70,
+            draw_bar_v(800, displayY-75,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
-                    draw_info.scr_var.xres); // to clear previous text
+                    draw_info.scr_var.xres, 
+                    COLOR_BLACK); // to clear previous text
         } else {
             draw_bar_v(0, displayY-8,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
-                    draw_info.scr_var.xres); // to clear previous text
+                    draw_info.scr_var.xres, 
+                    COLOR_BLACK); // to clear previous text
         }
 
         usleep(400000);
     }
 
-	draw_info.src_color.text32 = COLOR_CYAN;
     if (draw_info.portrait_mode == 180) {
-        draw_bar_v(800, displayY-60,
+        draw_bar_v(800, displayY-75,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
-                draw_info.scr_var.xres); // to clear previous text
+                draw_info.scr_var.xres, 
+                COLOR_BLACK); // to clear previous text
     } else {
         draw_bar_v(0, displayY-8,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
-                draw_info.scr_var.xres); // to clear previous text
+                draw_info.scr_var.xres, 
+                COLOR_BLACK); // to clear previous text
     }
 }
 
-void marquee_display (int font_type,const char *str_input,int position)
+void marquee_display (int font_type,const char *str_input,int position, int color32)
 {
 	int displayX,displayY;
 	unsigned char display_str[128];
@@ -771,18 +770,19 @@ void marquee_display (int font_type,const char *str_input,int position)
 	}
 
 	draw_info.src_color.bar32 = COLOR_BLACK;
-	draw_info.src_color.text32 = COLOR_MARQUEE;
     for (i = 0 ; i < count; i++) {
         if (draw_info.portrait_mode == 180) {
             draw_bar_v(800, displayY-70,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
-                    draw_info.scr_var.xres); // to clear previous text
+                    draw_info.scr_var.xres,
+                    draw_info.src_color.bar32); // to clear previous text
         } else {
             draw_bar_v(0, displayY-8,
                     draw_info.scr_var.xres,
                     BAR_WEIGHT,
-                    draw_info.scr_var.xres); // to clear previous text
+                    draw_info.scr_var.xres,
+                    draw_info.src_color.bar32); // to clear previous text
         }
 
         put_string_center(displayX, displayY,
@@ -791,7 +791,8 @@ void marquee_display (int font_type,const char *str_input,int position)
                 font_descriptor.width, 
                 font_descriptor.height, 
                 draw_text,
-                strlength);
+                strlength,
+                color32);
         
         if (draw_info.portrait_mode == 180) {
             displayX -= step;
@@ -810,22 +811,24 @@ void marquee_display (int font_type,const char *str_input,int position)
         draw_bar_v(800, displayY-60,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
-                draw_info.scr_var.xres); // to clear previous text
+                draw_info.scr_var.xres,
+                draw_info.src_color.bar32); // to clear previous text
     } else {
         draw_bar_v(0, displayY-8,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
-                draw_info.scr_var.xres); // to clear previous text
+                draw_info.scr_var.xres,
+                draw_info.src_color.bar32); // to clear previous text
     }
 }
 
-void display_text (int font_type,const char *str_input,int position)
+void display_text (int font_type, const char *str_input, int position, unsigned int color32)
 {
 	int displayX,displayY;
 	unsigned char display_str[128];
 	int strlength=strlen(str_input);
 
-	strncpy(display_str,str_input,strlen(str_input));
+	strncpy(display_str, str_input, strlen(str_input));
 	display_str[strlength]='\0';
 
 	if(draw_info.addr == NULL ){
@@ -1018,19 +1021,21 @@ void display_text (int font_type,const char *str_input,int position)
         draw_bar_v(800, displayY-60,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
-                draw_info.scr_var.xres); // to clear previous text
+                draw_info.scr_var.xres,
+                draw_info.src_color.bar32); // to clear previous text
     } else {
         draw_bar_v(0, displayY-8,
                 draw_info.scr_var.xres,
                 BAR_WEIGHT,
-                draw_info.scr_var.xres); // to clear previous text
+                draw_info.scr_var.xres,
+                draw_info.src_color.bar32); // to clear previous text
     }
 
 	put_string_center(displayX, displayY, display_str, draw_info.portrait_mode,
-			font_descriptor.width, font_descriptor.height, draw_text,strlength);
+			font_descriptor.width, font_descriptor.height, draw_text,strlength, color32);
 }
 
-void display_ratio (int ratio,int font_type)
+void display_ratio (int ratio, int font_type, unsigned int color32)
 {
 	int displayX,displayY;
 	char str_ratio[8];
@@ -1058,7 +1063,6 @@ void display_ratio (int ratio,int font_type)
 		str_ratio[0]='\0';
 
 	draw_info.src_color.bar32=COLOR_BLACK;
-
 	switch (draw_info.portrait_mode) {
 		case 90:
 			if(draw_info.resolution == RES_480x272) {
@@ -1070,9 +1074,11 @@ void display_ratio (int ratio,int font_type)
 
 			}
 
-			draw_bar_v(displayX-10,displayY-50,BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX-10, displayY-50,
+                    BAR_WEIGHT, BAR_WEIGHT+30,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 			put_string_center (displayX, displayY, str_ratio, draw_info.portrait_mode ,
-					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio));
+					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio), color32);
 		break;
 		case 180:
 			displayX=draw_info.scr_var.xres/2-10;
@@ -1082,9 +1088,11 @@ void display_ratio (int ratio,int font_type)
 			else
 				displayY=draw_info.scr_var.yres/4+30;
 
-			draw_bar_v(displayX-30,displayY-10,BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX-30, displayY-10,
+                    BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 			put_string_center (displayX+15, displayY+15, str_ratio, draw_info.portrait_mode,
-					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio));
+					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio), color32);
 		break;
 		case 270:
 			if(draw_info.resolution == RES_480x272) {
@@ -1095,9 +1103,11 @@ void display_ratio (int ratio,int font_type)
 				displayY=draw_info.scr_var.yres/2-20;
 			}
 
-			draw_bar_v(displayX-20,displayY-10,BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX-20, displayY-10,
+                    BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 			put_string_center (displayX, displayY, str_ratio, draw_info.portrait_mode ,
-					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio));
+					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio), color32);
 		break;
 		default:
 			displayX=draw_info.scr_var.xres/2-40;
@@ -1107,9 +1117,11 @@ void display_ratio (int ratio,int font_type)
 			else
 				displayY=draw_info.scr_var.yres/4+230;
 
-			draw_bar_v(displayX,displayY,BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX, displayY,
+                    BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 			put_string_center (displayX+15, displayY+15, str_ratio, draw_info.portrait_mode,
-					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio));
+					font_descriptor.width,font_descriptor.height,draw_text,strlen(str_ratio), color32);
 		break;
 	}
 }
@@ -1125,22 +1137,30 @@ void progress_clear(void)
 		case 90:
 			displayX=draw_info.scr_var.xres/2+230;
 			displayY=draw_info.scr_var.yres/2+30;
-			draw_bar_v(displayX-10,displayY-50,BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres);// to clear previous text
+			draw_bar_v(displayX-10, displayY-50, 
+                    BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 		break;
 		case 180:
 			displayX=draw_info.scr_var.xres/2-10;
 			displayY=draw_info.scr_var.yres/4+30;
-			draw_bar_v(displayX-30,displayY-10,BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX-30, displayY-10,
+                    BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 		break;
 		case 270:
 			displayX=draw_info.scr_var.xres/2-230;
 			displayY=draw_info.scr_var.yres/2-20;
-			draw_bar_v(displayX-20,displayY-10,BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX-20, displayY-10,
+                    BAR_WEIGHT,BAR_WEIGHT+30,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 		break;
 		default:
 			displayX=draw_info.scr_var.xres/2-40;
 			displayY=draw_info.scr_var.yres/4+230;
-			draw_bar_v(displayX,displayY,BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres); // to clear previous text
+			draw_bar_v(displayX, displayY,
+                    BAR_WEIGHT+30,BAR_WEIGHT,draw_info.scr_var.xres, 
+                    draw_info.src_color.bar32); // to clear previous text
 		break;
 	}
 	progressbar(100, COLOR_BLACK);

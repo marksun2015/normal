@@ -25,7 +25,6 @@ typedef struct alarm_data {
 #define MISC_IOCTBEEPCTL                (0x6B2D)
 void beep_wakeup()
 {
-    printf("111 \n");
     int handle = open("/dev/hwmisc", O_RDWR);
     if (!handle) {
         return;
@@ -60,7 +59,7 @@ void* alarm_display(void* data)
     int font_type = VGA25x57_IDX;
     while(1) {
         if(ad->alarm)
-            flicker_display(font_type, ad->disp_str, TEXT_LOWER);
+            flicker_display(font_type, ad->disp_str, TEXT_LOWER, COLOR_ORANGE);
 
         ad->alarm = 0;
         sleep(1);
@@ -104,10 +103,16 @@ int main(int argc, char *argv[])
         {
             rawtime = time(NULL);
             tmp = gmtime(&rawtime);
-            //sprintf(sys_time,"Day %02d/%02d(%02d) Time %02d:%02d:%02d",
+            //sprintf(sys_time,"Day %02d/%02d(%02d)     Time %02d:%02d:%02d",
             //        tmp->tm_mon+1, tmp->tm_mday, tmp->tm_wday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
             sprintf(sys_time,"Time %02d:%02d:%02d", tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
-            display_text(font_type, sys_time, TEXT_UPPER);
+            display_text(font_type, sys_time, TEXT_UPPER, COLOR_CYAN);
+
+            /* test */
+            //if((tmp->tm_hour == 11) && (tmp->tm_min == 27) && (tmp->tm_sec == 30)) {
+                //data.alarm = 1;
+                //data.disp_str = "Time is up! Get to work!";
+            //}
 
             if((tmp->tm_hour == 9) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
@@ -147,12 +152,12 @@ int main(int argc, char *argv[])
         fb_close();
     } else if (strcmp(argv[1], "DISP") == 0) {
         disp_open();
-        display_text(font_type,"Parsing OS file ...",TEXT_LOWER); //test
-        display_text(font_type,"!! Machine is on recovery mode !!",TEXT_UPPER);//test
+        display_text(font_type,"Parsing OS file ...",TEXT_LOWER, COLOR_CYAN); //test
+        display_text(font_type,"!! Machine is on recovery mode !!",TEXT_UPPER, COLOR_CYAN);//test
         display_margin();//test
         progressbar(100 , COLOR_WHITE); //test
         progressbar(30 , COLOR_GREEN); //test
-        display_ratio(30, VGA10x18_IDX); //test
+        display_ratio(30, VGA10x18_IDX, COLOR_CYAN); //test
         disp_close();
     }
 }
