@@ -534,8 +534,7 @@ void flicker_display (int font_type, const char *str_input, int position, unsign
 	int displayX,displayY;
 	unsigned char display_str[128];
 	int strlength=strlen(str_input);
-	int i, count = 10;
-	int step = 30;
+	int i, count = 20;
 
 	strncpy(display_str,str_input,strlen(str_input));
 	display_str[strlength]='\0';
