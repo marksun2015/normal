@@ -53,32 +53,49 @@ void beep_wakeup()
     return;
 }
 
-void beep_older_lunch()
+void beep_checkinout()
 {
+    int i = 0, j = 0, count = 3;
     int handle = open("/dev/hwmisc", O_RDWR);
     if (!handle) {
         return;
     }
 
-    ioctl(handle, MISC_IOCTBEEPCTL, 1);
-    usleep(10000);
-    ioctl(handle, MISC_IOCTBEEPCTL, 0);
-    sleep(1);
+    for (i = 0; i < count; i++) {
+        for (j = 0; j < 4; j++) {
+            ioctl(handle, MISC_IOCTBEEPCTL, 1);
+            usleep(10000);
+            ioctl(handle, MISC_IOCTBEEPCTL, 0);
+            usleep(200000);
+        }
+        usleep(300000);
+        for (j = 0; j < 2; j++) {
+            ioctl(handle, MISC_IOCTBEEPCTL, 1);
+            usleep(10000);
+            ioctl(handle, MISC_IOCTBEEPCTL, 0);
+            usleep(200000);
+        }
+        usleep(300000);
+    }
 
-    ioctl(handle, MISC_IOCTBEEPCTL, 1);
-    usleep(10000);
-    ioctl(handle, MISC_IOCTBEEPCTL, 0);
-    sleep(1);
+    close(handle);
+    return;
+}
 
-    ioctl(handle, MISC_IOCTBEEPCTL, 1);
-    usleep(10000);
-    ioctl(handle, MISC_IOCTBEEPCTL, 0);
-    sleep(1);
+void beep_older_lunch()
+{
+    int i = 0, count = 4;
+    int handle = open("/dev/hwmisc", O_RDWR);
+    if (!handle) {
+        return;
+    }
 
-    ioctl(handle, MISC_IOCTBEEPCTL, 1);
-    usleep(10000);
-    ioctl(handle, MISC_IOCTBEEPCTL, 0);
-    sleep(1);
+    for (i = 0; i < count; i++) {
+        ioctl(handle, MISC_IOCTBEEPCTL, 1);
+        usleep(10000);
+        ioctl(handle, MISC_IOCTBEEPCTL, 0);
+        sleep(1);
+    }
 
     close(handle);
     return;
@@ -97,7 +114,6 @@ void* alarm_display(void* data)
     }
     pthread_exit(NULL); 
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -124,7 +140,6 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-
     draw_info.portrait_mode = 180;
     font_type = VGA25x57_IDX;
 
@@ -134,20 +149,21 @@ int main(int argc, char *argv[])
         {
             rawtime = time(NULL);
             tmp = gmtime(&rawtime);
-            //sprintf(sys_time,"Day %02d/%02d(%02d)     Time %02d:%02d:%02d",
+            //sprintf(sys_time,"%02d/%02d(%02d) %02d:%02d:%02d",
             //        tmp->tm_mon+1, tmp->tm_mday, tmp->tm_wday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
             sprintf(sys_time,"Time %02d:%02d:%02d", tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
             display_text(font_type, sys_time, TEXT_UPPER, COLOR_CYAN);
 
-            if((tmp->tm_hour == 8) && (tmp->tm_min == 58) && (tmp->tm_sec == 0)) {
+            if((tmp->tm_hour == 8) && (tmp->tm_min == 45) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
                 data.disp_str = "Time is up! Remember order!";
-                beep_older_lunch();
+                beep_checkinout();
             }
 
             if((tmp->tm_hour == 9) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
                 data.disp_str = "Time is up! Get to work!";
+                //beep_older_lunch();
             }
 
             if((tmp->tm_hour == 10) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
@@ -169,7 +185,12 @@ int main(int argc, char *argv[])
             if((tmp->tm_hour == 18) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
                 data.disp_str = "Time is up! Get off work!";
-                beep_wakeup();
+            }
+
+            if((tmp->tm_hour == 18) && (tmp->tm_min == 3) && (tmp->tm_sec == 0)) {
+                data.alarm = 1;
+                data.disp_str = "Time is up! Check out!";
+                beep_checkinout();
             }
 
             //display_text(font_type,"=============",TEXT_LOWER);
