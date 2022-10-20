@@ -53,9 +53,9 @@ void beep_wakeup()
     return;
 }
 
-void beep_checkinout()
+void beep_checkinout(int count)
 {
-    int i = 0, j = 0, count = 3;
+    int i = 0, j = 0;
     int handle = open("/dev/hwmisc", O_RDWR);
     if (!handle) {
         return;
@@ -154,32 +154,32 @@ int main(int argc, char *argv[])
             sprintf(sys_time,"Time %02d:%02d:%02d", tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
             display_text(font_type, sys_time, TEXT_UPPER, COLOR_CYAN);
 
-            if((tmp->tm_hour == 8) && (tmp->tm_min == 45) && (tmp->tm_sec == 0)) {
+            if((tmp->tm_hour == 8) && (tmp->tm_min == 55) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
-                data.disp_str = "Time is up! Remember order!";
-                beep_checkinout();
+                data.disp_str = "Time is up! Check in!";
+                beep_checkinout(1);
             }
 
             if((tmp->tm_hour == 9) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
-                data.disp_str = "Time is up! Get to work!";
-                //beep_older_lunch();
+                data.disp_str = "Remember order!";
+                beep_older_lunch();
             }
 
             if((tmp->tm_hour == 10) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
-                data.disp_str = "Time is up! Meeting!";
+                data.disp_str = "Meeting! Meeting!";
             }
 
             if((tmp->tm_hour == 12) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
-                data.disp_str = "Time is up! Lunch Time!";
-                beep_wakeup();
+                data.disp_str = "Lunch Time! Lunch Time!";
+                //beep_wakeup();
             }
 
             if((tmp->tm_hour == 13) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
-                data.disp_str = "Time is up! Wake Up!";
+                data.disp_str = "Wake Up! Wake Up!";
             }
 
             if((tmp->tm_hour == 18) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
             if((tmp->tm_hour == 18) && (tmp->tm_min == 3) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
                 data.disp_str = "Time is up! Check out!";
-                beep_checkinout();
+                beep_checkinout(3);
             }
 
             //display_text(font_type,"=============",TEXT_LOWER);
