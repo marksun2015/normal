@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 
             if((tmp->tm_hour == 9) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
-                data.disp_str = "Remember order!";
+                data.disp_str = "Remember order lunch!";
                 beep_older_lunch();
             }
 
