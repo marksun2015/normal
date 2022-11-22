@@ -82,9 +82,9 @@ void beep_checkinout(int count)
     return;
 }
 
-void beep_older_lunch()
+void beep_older_lunch(int count)
 {
-    int i = 0, count = 4;
+    int i = 0; 
     int handle = open("/dev/hwmisc", O_RDWR);
     if (!handle) {
         return;
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
             if((tmp->tm_hour == 9) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
                 data.disp_str = "Remember order lunch!";
-                beep_older_lunch();
+                beep_older_lunch(3);
             }
 
             if((tmp->tm_hour == 10) && (tmp->tm_min == 0) && (tmp->tm_sec == 0)) {
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
             if((tmp->tm_hour == 18) && (tmp->tm_min == 3) && (tmp->tm_sec == 0)) {
                 data.alarm = 1;
                 data.disp_str = "Time is up! Check out!";
-                beep_checkinout(3);
+                beep_checkinout(2);
             }
 
             //display_text(font_type,"=============",TEXT_LOWER);
